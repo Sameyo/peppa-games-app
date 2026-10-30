@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.home.peppagames'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.home.peppagames'
+        minSdk 24
+        targetSdk 35
+        versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+        versionName '1.0'
+    }
+
+    // A fixed key committed to this private repo, so every new build installs
+    // over the previous one. Fine for a home-only app; never use it for a store release.
+    signingConfigs {
+        home {
+            storeFile file('home.keystore')
+            storePassword 'peppahome'
+            keyAlias 'home'
+            keyPassword 'peppahome'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.home
+        }
+        debug {
+            signingConfig signingConfigs.home
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

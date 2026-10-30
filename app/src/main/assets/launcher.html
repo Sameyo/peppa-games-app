@@ -1,0 +1,256 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Peppa Games</title>
+<style>
+  :root {
+    --sky-top: #6cc4ff;
+    --sky-bottom: #c4ecff;
+    --grass: #7cc66b;
+    --grass-dark: #5aa94a;
+    --pink: #f7a1c4;
+    --pink-dark: #e0679b;
+    --ink: #3b2a3f;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: "Comic Sans MS", "Chalkboard SE", "Baloo 2", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(var(--sky-top), var(--sky-bottom) 70%, var(--grass) 70%, var(--grass-dark));
+    -webkit-touch-callout: none;
+  }
+  /* Rolling hills along the bottom */
+  body::before {
+    content: ""; position: fixed; left: -10%; right: -10%; bottom: 22%; height: 22%;
+    background: radial-gradient(ellipse at 25% 100%, var(--grass) 60%, transparent 61%),
+                radial-gradient(ellipse at 75% 100%, var(--grass) 55%, transparent 56%);
+    pointer-events: none;
+  }
+  .cloud { position: fixed; background: #fff; border-radius: 999px; opacity: .85; pointer-events: none; }
+  .cloud::before, .cloud::after { content: ""; position: absolute; background: #fff; border-radius: 50%; }
+  .c1 { top: 6%; left: 8%; width: 110px; height: 34px; }
+  .c1::before { width: 50px; height: 50px; left: 18px; top: -24px; }
+  .c1::after { width: 36px; height: 36px; left: 58px; top: -14px; }
+  .c2 { top: 12%; right: 12%; width: 90px; height: 28px; }
+  .c2::before { width: 40px; height: 40px; left: 14px; top: -20px; }
+  .c2::after { width: 30px; height: 30px; left: 46px; top: -12px; }
+
+  main {
+    position: relative; height: 100%;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 32px max(24px, env(safe-area-inset-left));
+  }
+  .grid {
+    display: grid; gap: 22px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    padding-top: 8px;
+  }
+  .tile {
+    background: var(--card); border: 6px solid var(--pink); border-radius: 28px;
+    padding: 0; overflow: hidden; text-align: center; cursor: pointer;
+    box-shadow: 0 8px 0 var(--pink-dark);
+    transition: transform .12s ease, box-shadow .12s ease;
+    font: inherit; color: inherit; display: flex; flex-direction: column;
+  }
+  .tile:active, .tile.pressed { transform: translateY(6px) scale(.97); box-shadow: 0 2px 0 var(--pink-dark); }
+  .tile:nth-child(4n+2) { border-color: #ffd36b; box-shadow: 0 8px 0 #e0a92a; }
+  .tile:nth-child(4n+3) { border-color: #9ad0ff; box-shadow: 0 8px 0 #4f9fe0; }
+  .tile:nth-child(4n+4) { border-color: #b7e59b; box-shadow: 0 8px 0 #6fb04b; }
+  .thumb {
+    aspect-ratio: 4 / 3; width: 100%; background: #fde3ee center / cover no-repeat;
+    display: grid; place-items: center; font-size: 64px;
+  }
+  .name {
+    padding: 10px 12px 14px; font-size: 20px; font-weight: 700; line-height: 1.15;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  .message {
+    position: fixed; inset: 0; display: grid; place-content: center; gap: 22px;
+    text-align: center; font-size: 30px; font-weight: 700; padding: 24px;
+  }
+  .message[hidden] { display: none; }
+  .message small { font-size: 18px; font-weight: 400; }
+  .big-button {
+    font: inherit; font-size: 26px; font-weight: 700; color: #fff;
+    background: var(--pink-dark); border: 0; border-radius: 999px; padding: 18px 40px;
+    box-shadow: 0 6px 0 #b23f73; justify-self: center;
+  }
+  .big-button.secondary { background: #4f9fe0; box-shadow: 0 6px 0 #2f6fb0; font-size: 20px; }
+  .bounce { width: 90px; height: 90px; justify-self: center; border-radius: 50%; background: var(--pink);
+    animation: hop .7s ease-in-out infinite alternate; box-shadow: inset -10px -10px 0 var(--pink-dark); }
+  @keyframes hop { from { transform: translateY(0) } to { transform: translateY(-30px) } }
+
+  /* Grown-up corner: hold the gear for 2 seconds */
+  .gear {
+    position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: 10px;
+    width: 56px; height: 56px; border-radius: 50%; border: 0;
+    background: rgba(255,255,255,.35); font-size: 28px; color: rgba(0,0,0,.35);
+  }
+  .gear::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    background: conic-gradient(var(--pink-dark) calc(var(--p, 0) * 1turn), transparent 0);
+    -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%); mask: radial-gradient(circle, transparent 58%, #000 60%);
+  }
+  .panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; place-items: center; padding: 16px; }
+  .panel-backdrop.open { display: grid; }
+  .panel {
+    background: #fff; border-radius: 24px; padding: 20px 24px; width: min(560px, 100%);
+    max-height: 100%; overflow-y: auto; font-family: system-ui, sans-serif; font-size: 16px;
+  }
+  .panel h2 { margin: 0 0 6px; font-size: 22px; }
+  .panel p.tip { margin: 0 0 14px; color: #6a5a6e; font-size: 14px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #eee; }
+  .row label { flex: 1; }
+  .row small { display: block; color: #6a5a6e; font-size: 13px; }
+  .row input { width: 26px; height: 26px; accent-color: var(--pink-dark); }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .actions button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 12px 16px; background: #f1e6ee; color: var(--ink); }
+  .actions button.primary { background: var(--pink-dark); color: #fff; margin-left: auto; }
+</style>
+</head>
+<body>
+<div class="cloud c1"></div><div class="cloud c2"></div>
+<main><div class="grid" id="grid"></div></main>
+<div class="message" id="message" hidden></div>
+
+<button class="gear" id="gear" aria-label="Grown-ups">⚙</button>
+<div class="panel-backdrop" id="panel">
+  <div class="panel">
+    <h2>Grown-ups</h2>
+    <p class="tip">To leave a game, hold a finger on the top-left corner of the screen for 3 seconds.</p>
+    <div id="switches"></div>
+    <div class="actions">
+      <button id="refresh">Find games again</button>
+      <button id="page">Open the Peppa page</button>
+      <button id="exit">Close app</button>
+      <button class="primary" id="done">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var SWITCH_INFO = {
+    peppaOnly: ["Only Peppa games", "Hide other shows' games that appear on the page."],
+    focus: ["Game fills the screen", "Hide the rest of the web page. Turn off if a game won't start."],
+    blockAds: ["Block ads", "Turn off if a game gets stuck before it starts."],
+    desktop: ["Desktop version of the site", "Try this if a game says it needs a computer. Then tap Find games again."]
+  };
+
+  function bridge() { return window.App; }
+  function getState() {
+    try { return JSON.parse(bridge().state()); }
+    catch (e) { return { games: [], scouting: false, failed: true, settings: {}, gamesPage: "" }; }
+  }
+
+  function isPeppa(g) { return /peppa|george pig/i.test(g.title + " " + g.url); }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function render() {
+    var s = getState();
+    var games = s.games || [];
+    if (s.settings.peppaOnly) {
+      var peppa = games.filter(isPeppa);
+      if (peppa.length) games = peppa;
+    }
+    var grid = document.getElementById("grid");
+    var msg = document.getElementById("message");
+    grid.innerHTML = "";
+    msg.innerHTML = "";
+
+    if (!games.length) {
+      msg.hidden = false;
+      if (s.scouting) {
+        msg.appendChild(el("div", "bounce"));
+        msg.appendChild(el("div", null, "Finding the games…"));
+      } else {
+        msg.appendChild(el("div", null, "Oops! No games found."));
+        msg.appendChild(el("small", null, "Check the Wi-Fi, then try again."));
+        var retry = el("button", "big-button", "Try again");
+        retry.onclick = function () { bridge().refresh(); };
+        msg.appendChild(retry);
+        var page = el("button", "big-button secondary", "Open the Peppa page instead");
+        page.onclick = function () { bridge().playPage(s.gamesPage); };
+        msg.appendChild(page);
+      }
+      return;
+    }
+
+    msg.hidden = true;
+    games.forEach(function (g) {
+      var tile = el("button", "tile");
+      var thumb = el("div", "thumb");
+      if (g.img) thumb.style.backgroundImage = 'url("' + g.img.replace(/"/g, "%22") + '")';
+      else thumb.textContent = "🐷";
+      tile.appendChild(thumb);
+      tile.appendChild(el("div", "name", tidy(g.title)));
+      tile.onclick = function () {
+        tile.classList.add("pressed");
+        setTimeout(function () { tile.classList.remove("pressed"); bridge().play(g.url); }, 150);
+      };
+      grid.appendChild(tile);
+    });
+  }
+
+  function tidy(t) {
+    t = (t || "").replace(/^play\s+/i, "").replace(/\s*[|–-]\s*nick.*$/i, "").trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  // ---- grown-ups panel (hold the gear for 2 s) ----
+  (function () {
+    var gear = document.getElementById("gear");
+    var panel = document.getElementById("panel");
+    var start = 0, raf = 0;
+    function tick() {
+      var p = Math.min(1, (Date.now() - start) / 2000);
+      gear.style.setProperty("--p", p);
+      if (p >= 1) { stop(); openPanel(); return; }
+      raf = requestAnimationFrame(tick);
+    }
+    function stop() { cancelAnimationFrame(raf); start = 0; gear.style.setProperty("--p", 0); }
+    gear.addEventListener("touchstart", function (e) { e.preventDefault(); start = Date.now(); tick(); }, { passive: false });
+    gear.addEventListener("touchend", stop);
+    gear.addEventListener("touchcancel", stop);
+    gear.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+    function openPanel() {
+      var s = getState();
+      var box = document.getElementById("switches");
+      box.innerHTML = "";
+      Object.keys(SWITCH_INFO).forEach(function (k) {
+        var row = el("div", "row");
+        var label = el("label");
+        label.htmlFor = "sw-" + k;
+        label.appendChild(document.createTextNode(SWITCH_INFO[k][0]));
+        label.appendChild(el("small", null, SWITCH_INFO[k][1]));
+        var input = el("input");
+        input.type = "checkbox"; input.id = "sw-" + k; input.checked = !!s.settings[k];
+        input.onchange = function () { bridge().set(k, input.checked); render(); };
+        row.appendChild(label); row.appendChild(input);
+        box.appendChild(row);
+      });
+      panel.classList.add("open");
+    }
+    function close() { panel.classList.remove("open"); }
+    document.getElementById("done").onclick = close;
+    document.getElementById("refresh").onclick = function () { close(); bridge().refresh(); };
+    document.getElementById("page").onclick = function () { close(); bridge().playPage(getState().gamesPage); };
+    document.getElementById("exit").onclick = function () { bridge().exit(); };
+    panel.addEventListener("click", function (e) { if (e.target === panel) close(); });
+  })();
+
+  render();
+</script>
+</body>
+</html>
